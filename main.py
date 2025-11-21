@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -219,8 +219,34 @@ async def get_latest_firmware(db: Session = Depends(get_db)):
         "version": update.version,
         "filename": update.filename,
         "description": update.description,
-        "release_date": update.release_date.isoformat()
+        "release_date": update.release_date.isoformat(),
+        "download_url": f"/ota/download/{update.id}"
     }
+
+@app.get("/ota/download/{update_id}")
+async def download_firmware(update_id: int, db: Session = Depends(get_db)):
+    # 获取固件信息
+    update = db.query(OTAUpdate).filter(OTAUpdate.id == update_id).first()
+    if not update:
+        raise HTTPException(status_code=404, detail="Firmware not found")
+    
+    # 检查文件是否存在
+    file_path = os.path.join(UPLOAD_DIR, update.filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Firmware file not found")
+    
+    # 读取文件内容
+    with open(file_path, "rb") as file:
+        content = file.read()
+    
+    # 返回文件响应
+    return Response(
+        content=content,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename={update.filename}"
+        }
+    )
 
 @app.put("/ota/updates/{update_id}/status")
 async def update_firmware_status(update_id: int, is_active: bool = Form(...), db: Session = Depends(get_db)):
