@@ -171,6 +171,9 @@ def main():
     """
     主函数，处理命令行参数并执行上传
     """
+    # 首先声明全局变量
+    global UPLOAD_ENDPOINT, BASE_URL
+    
     parser = argparse.ArgumentParser(description='BMS服务器固件上传工具')
     parser.add_argument('file', help='固件文件路径')
     parser.add_argument('-v', '--version', help='固件版本号 (例如: 1.0.0)')
@@ -180,7 +183,6 @@ def main():
     args = parser.parse_args()
     
     # 如果指定了自定义URL，更新端点
-    global UPLOAD_ENDPOINT, BASE_URL
     if args.url != BASE_URL:
         BASE_URL = args.url.rstrip('/')
         UPLOAD_ENDPOINT = f"{BASE_URL}/ota/upload"
